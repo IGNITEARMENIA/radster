@@ -84,6 +84,7 @@ canvas#game{display:block;width:100%;aspect-ratio:900/300;max-width:100%}
 .hudbtns button:focus-visible{outline:3px solid var(--volt);outline-offset:2px}
 @media (max-width:620px){.hudbtns{top:3px;gap:5px}.hudbtns button{width:26px;height:26px;border-width:1.5px}.hudbtns svg{width:10px;height:10px}}
 @media (pointer:coarse){.keys{display:none}}
+@media (max-width:620px){body{padding-block:10px 20px}.brand img{height:34px}.wrap{gap:10px}}
 .pad{display:grid;grid-template-columns:repeat(4,1fr);gap:8px}
 .pad button{font-family:var(--f-display);font-weight:700;font-size:14px;border:2px solid var(--ink);border-radius:8px;
   background:var(--dune);color:var(--ink);padding:12px 6px;cursor:pointer;touch-action:none;
@@ -263,7 +264,12 @@ function reset(){
 }
 reset();
 
-function resize(){const dpr=Math.min(window.devicePixelRatio||1,2),w=cv.clientWidth;cv.width=Math.round(w*dpr);cv.height=Math.round(w*H/W*dpr)}
+/* phones get a narrower, taller camera so the road is bigger on screen */
+let VW=W,VH=H,OY=0;
+function resize(){const dpr=Math.min(window.devicePixelRatio||1,2),w=cv.clientWidth;if(!w)return;
+  const narrow=w<700;VW=narrow?600:W;VH=narrow?430:H;OY=VH-H;
+  const ar=`${VW} / ${VH}`;if(cv.style.aspectRatio!==ar)cv.style.aspectRatio=ar;
+  cv.width=Math.round(w*dpr);cv.height=Math.round(w*VH/VW*dpr)}
 addEventListener('resize',resize);resize();
 try{new ResizeObserver(resize).observe(cv)}catch(e){}
 
@@ -417,7 +423,7 @@ function checkMissions(){
   run.score=score();run.level=level;
   for(const m of activeMissions())if(m.test(run)){doneM.add(m.id);runDone.push(m.id);store.set('rr_m',[...doneM]);
     bonus+=200;banner={txt:'✓ '+m.txt+' · +200',life:2.4}}
-  if(!recordShown&&hi>0&&run.score>hi){recordShown=true;pops.push({x:W/2,y:110,txt:'ՆՈՐ ՌԵԿՈՐԴ!',life:1.6,col:'#2f6bff'})}
+  if(!recordShown&&hi>0&&run.score>hi){recordShown=true;pops.push({x:VW/2,y:110,txt:'ՆՈՐ ՌԵԿՈՐԴ!',life:1.6,col:'#2f6bff'})}
 }
 function land(){
   if(car.dir&&car.flip>.12&&car.flip<.88){
@@ -753,14 +759,16 @@ function drawSkyline(b){
   if(logo.complete&&logo.naturalWidth){const lh=64,lw=lh*logo.naturalWidth/logo.naturalHeight;ctx.drawImage(logo,b+1378-lw/2,G-130,lw,lh)}
 }
 function drawScene(){
+  if(OY>0){ctx.fillStyle=C('top');ctx.fillRect(0,-OY-2,W,OY+3)}
   const sk=ctx.createLinearGradient(0,0,0,GROUND);sk.addColorStop(0,C('top'));sk.addColorStop(.55,C('mid'));sk.addColorStop(1,C('bot'));
   ctx.fillStyle=sk;ctx.fillRect(0,0,W,H);
   if(pal.stars>.02){for(const[x,y,r]of STARS){ctx.fillStyle=`rgba(255,255,255,${pal.stars*(.45+.4*Math.sin(t*2+x))})`;ctx.fillRect(x,y,r,r)}}
   // sun, moon or neon sun
-  const sg=ctx.createRadialGradient(760,96,10,760,96,80);sg.addColorStop(0,C('sun',.55));sg.addColorStop(1,C('sun',0));
-  ctx.fillStyle=sg;ctx.fillRect(680,16,160,160);
-  ctx.fillStyle=C('sun',.95);ctx.beginPath();ctx.arc(760,96,30,0,Math.PI*2);ctx.fill();
-  if(pal.neon>.05){ctx.fillStyle=C('mid',pal.neon);for(let k=0;k<5;k++)ctx.fillRect(728,100+k*6,64,1.5+k*.8)}
+  const SX=Math.min(760,VW-130);
+  const sg=ctx.createRadialGradient(SX,96,10,SX,96,80);sg.addColorStop(0,C('sun',.55));sg.addColorStop(1,C('sun',0));
+  ctx.fillStyle=sg;ctx.fillRect(SX-80,16,160,160);
+  ctx.fillStyle=C('sun',.95);ctx.beginPath();ctx.arc(SX,96,30,0,Math.PI*2);ctx.fill();
+  if(pal.neon>.05){ctx.fillStyle=C('mid',pal.neon);for(let k=0;k<5;k++)ctx.fillRect(SX-32,100+k*6,64,1.5+k*.8)}
   // Ararat
   const off=-(dist*.02)%1200;
   for(const base of [off,off+1200]){
@@ -816,13 +824,14 @@ function drawLights(){
 function heart(x,y,on){ctx.fillStyle=on?'#d90012':'rgba(42,34,51,.2)';ctx.beginPath();ctx.moveTo(x,y+4);
   ctx.bezierCurveTo(x,y,x-7,y-1,x-7,y+4);ctx.bezierCurveTo(x-7,y+8,x,y+11,x,y+14);ctx.bezierCurveTo(x,y+11,x+7,y+8,x+7,y+4);ctx.bezierCurveTo(x+7,y-1,x,y,x,y+4);ctx.fill()}
 function drawHUD(){
+  const sm=VW<W,hs=sm?1.12:1,RW=VW/hs,pw=sm?200:252;ctx.scale(hs,hs);
   ctx.textBaseline='top';
-  ctx.fillStyle='rgba(251,246,238,.72)';ctx.fillRect(10,8,206,66);ctx.fillRect(W-262,8,252,48);
+  ctx.fillStyle='rgba(251,246,238,.78)';ctx.fillRect(10,8,206,66);ctx.fillRect(RW-pw-10,8,pw,48);
   ctx.font='700 18px Silkscreen, monospace';ctx.textAlign='right';
-  ctx.fillStyle='rgba(42,34,51,.55)';ctx.fillText('HI '+pad5(hi),W-120,14);
-  ctx.fillStyle='#2a2233';ctx.fillText(pad5(score()),W-18,14);
+  ctx.fillStyle='rgba(42,34,51,.55)';ctx.fillText('HI '+pad5(hi),RW-(sm?100:120),14);
+  ctx.fillStyle='#2a2233';ctx.fillText(pad5(score()),RW-18,14);
   ctx.font='800 12px "Noto Sans Armenian", sans-serif';
-  ctx.fillText(`ԳՈՏԻ ${level} · ${DISTRICTS[(level-1)%DISTRICTS.length]}`,W-18,36);
+  ctx.fillText(`ԳՈՏԻ ${level} · ${DISTRICTS[(level-1)%DISTRICTS.length]}`,RW-18,36);
   ctx.textAlign='left';ctx.fillStyle='#f39a2b';ctx.beginPath();ctx.arc(92,59,5,0,Math.PI*2);ctx.fill();
   ctx.fillStyle='#2a2233';ctx.fillText('×'+run.apr,100,52);
   const x=18,y=14,w=190,h=12,full=charge>=100;
@@ -833,7 +842,8 @@ function drawHUD(){
   for(let i=0;i<3;i++)heart(x+8+i*20,y+38,i<lives);
 }
 function render(){
-  ctx.setTransform(cv.width/W,0,0,cv.height/H,0,0);
+  const sx=cv.width/VW,sy=cv.height/VH;
+  ctx.setTransform(sx,0,0,sy,0,sy*OY);
   if(shake>0)ctx.translate((Math.random()-.5)*12*shake,(Math.random()-.5)*12*shake);
   drawScene();
   drawSpeedFx();
@@ -855,10 +865,10 @@ function render(){
   for(const p of pops){ctx.fillStyle=p.col==='ink'?C('line'):p.col;ctx.globalAlpha=Math.min(1,p.life*2);ctx.fillText(p.txt,p.x,p.y);ctx.globalAlpha=1}
   if((state==='play'||state==='pause')&&banner.life>0){
     ctx.globalAlpha=Math.min(1,banner.life*2);ctx.font='900 20px "Noto Sans Armenian", sans-serif';
-    const tw=ctx.measureText(banner.txt).width+40;ctx.fillStyle='rgba(42,34,51,.85)';ctx.fillRect(W/2-tw/2,132,tw,34);
-    ctx.fillStyle='#fbf6ee';ctx.fillText(banner.txt,W/2,156);ctx.globalAlpha=1;
+    const tw=ctx.measureText(banner.txt).width+40;ctx.fillStyle='rgba(42,34,51,.85)';ctx.fillRect(VW/2-tw/2,132,tw,34);
+    ctx.fillStyle='#fbf6ee';ctx.fillText(banner.txt,VW/2,156);ctx.globalAlpha=1;
   }
-  if(state!=='menu')drawHUD();
+  if(state!=='menu'){ctx.setTransform(sx,0,0,sy,0,0);drawHUD()}
 }
 const pv=$('preview'),pg=pv.getContext('2d');
 function renderPreview(){
